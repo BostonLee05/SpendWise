@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-const String apiBaseUrl = 'http://10.0.2.2:8000';
+const String apiBaseUrl = 'https://spendwise-api-bjd7.onrender.com';
 
 class UserModel {
   final int id;
@@ -513,9 +513,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: const Text('Add expense'),
           content: SizedBox(
             width: 340,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 TextField(
                   controller: amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -549,7 +550,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                   onChanged: (value) => frequency = value ?? 'one_time',
                 ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -607,9 +609,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: const Text('Edit expense'),
           content: SizedBox(
             width: 340,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 TextField(
                   controller: amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -643,7 +646,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                   onChanged: (value) => frequency = value ?? expense.frequency,
                 ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -770,20 +774,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      _SummaryCard(label: 'Monthly income', value: 'RM ${dashboard.monthlyIncome.toStringAsFixed(2)}'),
+                      Expanded(child: _SummaryCard(label: 'Monthly income', value: 'RM ${dashboard.monthlyIncome.toStringAsFixed(2)}')),
                       const SizedBox(width: 12),
-                      _SummaryCard(label: 'Spent', value: 'RM ${dashboard.totalSpent.toStringAsFixed(2)}'),
+                      Expanded(child: _SummaryCard(label: 'Spent', value: 'RM ${dashboard.totalSpent.toStringAsFixed(2)}')),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _SummaryCard(label: 'Monthly budget', value: 'RM ${dashboard.monthlyBudget.toStringAsFixed(2)}'),
+                      Expanded(child: _SummaryCard(label: 'Monthly budget', value: 'RM ${dashboard.monthlyBudget.toStringAsFixed(2)}')),
                       const SizedBox(width: 12),
-                      _SummaryCard(
-                        label: 'Budget left',
-                        value: 'RM ${dashboard.budgetRemaining.toStringAsFixed(2)}',
-                        accent: true,
+                      Expanded(
+                        child: _SummaryCard(
+                          label: 'Budget left',
+                          value: 'RM ${dashboard.budgetRemaining.toStringAsFixed(2)}',
+                          accent: true,
+                          negative: dashboard.budgetRemaining < 0,
+                        ),
                       ),
                     ],
                   ),
@@ -792,6 +799,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     label: 'Remaining',
                     value: 'RM ${dashboard.remaining.toStringAsFixed(2)}',
                     accent: true,
+                    negative: dashboard.remaining < 0,
                   ),
                   const SizedBox(height: 20),
                   CategoryChart(data: dashboard.categoryTotals),
@@ -834,10 +842,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     IconButton(
                                       onPressed: () => _editExpense(expense),
                                       icon: const Icon(Icons.edit_outlined, size: 18),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                      visualDensity: VisualDensity.compact,
                                       tooltip: 'Edit expense',
                                     ),
                                     IconButton(
                                       onPressed: () async {
+                                        final shouldDelete = await showDialog<bool>(
+                                          context: context,
+                                          builder: (dialogContext) => AlertDialog(
+                                            title: const Text('Delete expense?'),
+                                            content: const Text('This expense will be permanently removed.'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(dialogContext, false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              FilledButton(
+                                                onPressed: () => Navigator.pop(dialogContext, true),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (shouldDelete != true || !context.mounted) return;
+
                                         final messenger = ScaffoldMessenger.maybeOf(context);
                                         try {
                                           await ApiService.deleteExpense(widget.token, expense.id);
@@ -850,6 +880,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         }
                                       },
                                       icon: const Icon(Icons.delete_outline, size: 18),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                      visualDensity: VisualDensity.compact,
                                       tooltip: 'Delete expense',
                                     ),
                                   ],
@@ -951,22 +984,29 @@ class _SummaryCard extends StatelessWidget {
   final String label;
   final String value;
   final bool accent;
+  final bool negative;
 
   const _SummaryCard({
     required this.label,
     required this.value,
     this.accent = false,
+    this.negative = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
+    return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: accent ? Colors.green.shade50 : Colors.white,
+            color: accent
+              ? (negative ? Colors.red.shade50 : Colors.green.shade50)
+              : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: accent ? Colors.green.shade200 : Colors.grey.shade200),
+            border: Border.all(
+            color: accent
+              ? (negative ? Colors.red.shade200 : Colors.green.shade200)
+              : Colors.grey.shade200,
+            ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -986,7 +1026,6 @@ class _SummaryCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
