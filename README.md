@@ -4,6 +4,8 @@ SpendWise is a full-stack personal finance mobile app for recording expenses, se
 
 The project was built as a portfolio application to demonstrate mobile development, REST API design, authentication, relational data modeling, and cloud deployment.
 
+This app is currently online however it takes a while to load when it hasn't been used for some time.
+
 ## Features
 
 - Account registration and JWT-based login
